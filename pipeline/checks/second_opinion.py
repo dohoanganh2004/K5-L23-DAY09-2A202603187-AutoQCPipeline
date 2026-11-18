@@ -40,5 +40,58 @@ from ..model_cache import get_preds  # noqa: F401
 
 
 def run(ds, cfg, preds=None):
-    # TODO
-    raise NotImplementedError("check second_opinion chưa làm")
+    c = cfg["second_opinion"]
+    if preds is None:
+        preds = get_preds(ds, cfg, "checker")
+    n_classes = len(ds.classes)
+    issues = []
+
+    def warn(code, stem, msg, line=None, **extra):
+        issues.append(Issue("second_opinion", WARN, code, stem, msg, line=line, extra=extra))
+
+    for path in ds.image_files():
+        stem = path.stem
+        if stem not in preds or not ds.label_path(stem).exists():
+            continue                                    # không có dự đoán hoặc chưa có file nhãn: bỏ qua
+        size = ds.image_size(stem)
+        if not size:
+            continue                                    # ảnh hỏng: check `images` đã báo
+        W, H = size
+
+        # nhãn hợp lệ kèm số dòng gốc (dòng hỏng / id lạ bị bỏ qua, không làm chết script)
+        labels = []                                     # (số dòng, (id, cx, cy, w, h))
+        for no, text in ds.read_label_lines(stem) or []:
+            try:
+                b = parse_yolo_line(text)
+            except ValueError:
+                continue
+            if 0 <= b[0] < n_classes:
+                labels.append((no, b))
+
+        rows = preds[stem]
+
+        # Phần A: duyệt từng dự đoán đáng tin của model
+        for cls, conf, cx, cy, w, h in rows:
+            if conf < c["conf"] or (w * W) * (h * H) < c["min_area_px"]:
+                continue
+            cands = [(iou_xywh((cx, cy, w, h), b[1:]), b[0]) for _, b in labels]
+            cands = [(iou, lc) for iou, lc in cands if iou >= c["iou_missing"]]
+            if not cands:
+                warn("POSSIBLE_MISSING", stem, "model thấy vật nhưng nhãn không có box", conf=conf, cls=int(cls))
+                continue
+            same = [iou for iou, lc in cands if lc == cls]
+            if same:
+                if max(same) < c["iou_loose"]:
+                    warn("POSSIBLE_LOOSE_BOX", stem, "đúng vật, đúng lớp nhưng box lỏng/lệch", conf=conf, iou=round(max(same), 3))
+                continue                                # nhãn cùng lớp đã phủ vật này
+            other = max(iou for iou, _ in cands)
+            if other >= c["iou_match"]:
+                warn("POSSIBLE_WRONG_CLASS", stem, "đúng vật nhưng model nói lớp khác", conf=conf, iou=round(other, 3))
+            # IoU khác lớp trong [iou_missing, iou_match): mơ hồ, không cờ gì
+
+        # Phần B: box nhãn không khớp vật nào model thấy
+        fp_boxes = [r[2:] for r in rows if r[1] >= c["fp_conf"]]
+        for no, b in labels:
+            if all(iou_xywh(b[1:], p) < c["iou_missing"] for p in fp_boxes):
+                warn("POSSIBLE_FALSE_POS", stem, "box nhãn không khớp vật nào model thấy", line=no, cls=b[0])
+    return issues
