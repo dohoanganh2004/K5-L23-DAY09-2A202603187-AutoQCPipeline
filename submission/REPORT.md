@@ -64,7 +64,6 @@ Vài giả thuyết vì sao clean không hơn raw:
 
 **Dùng AI:** Có. Tôi nhờ Claude Code viết 4 module `label_format`, `gate`, `autofix`, `second_opinion` và giúp soạn báo cáo.
 - **Prompt chính:** tôi yêu cầu từng module một, theo kiểu:
-  - `label_format`: "Viết hàm `run` trong `pipeline/checks/label_format.py`: mở lần lượt từng file nhãn, đọc từng dòng, kiểm tra lỗi và ghi mọi lỗi tìm thấy vào một danh sách."
   - `gate`: "Viết hàm nhận danh sách lỗi đã có rồi đưa ra quyết định cuối (Release, Hold hoặc Rework)."
   - `autofix`: prompt dài theo 4 ý trong `docs/PROMPTING.md` (đầu vào, quy tắc sửa, kiểu kết quả, giới hạn an toàn như chỉ sửa trong thư mục dữ liệu đang chạy, không đụng `data/raw`).
   - `second_opinion`: "Viết hoàn chỉnh `second_opinion.py`."
