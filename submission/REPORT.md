@@ -69,4 +69,4 @@ Vài giả thuyết vì sao clean không hơn raw:
   - `autofix`: prompt dài theo 4 ý trong `docs/PROMPTING.md` (đầu vào, quy tắc sửa, kiểu kết quả, giới hạn an toàn như chỉ sửa trong thư mục dữ liệu đang chạy, không đụng `data/raw`).
   - `second_opinion`: "Viết hoàn chỉnh `second_opinion.py`."
 - **Cách kiểm:** chạy test từng module rồi cả bộ (79 test đều qua), chạy pipeline thật, đối chiếu danh sách ảnh bị cho là trùng, và chạy `--budget 0` để xem cổng chặn có ra Rework không.
-- **Một lần AI sai:** ở Bước 1, lệnh xem ảnh AI đưa chỉ ra 2 ảnh, trong khi tôi cần khoảng 10 ảnh để tìm lỗi. Tôi hỏi lại, AI sửa thành lệnh liệt kê đủ 12 ảnh.
+- **Một lần AI sai:** 
